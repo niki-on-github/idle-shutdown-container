@@ -1,17 +1,13 @@
 import time
 import os
 import psutil
+import requests
+import urllib3
 import subprocess
 from pynvml import nvmlInit, nvmlDeviceGetCount, nvmlDeviceGetHandleByIndex, \
     nvmlDeviceGetUtilizationRates
 
-def get_float_env(key: str, default: float) -> float:
-    try:
-        value = float(os.getenv(key, str(default)))
-    except ValueError:
-        value = default
-
-    return value
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_int_env(key: str, default: int) -> int:
     try:
@@ -53,6 +49,7 @@ if __name__ == "__main__":
     idle_time = get_int_env("IDLE_TIME_SECONDS", 500)
     cpu_idle = get_int_env("CPU_IDLE_THRESHOLD_PERCENT", 20)
     gpu_idle = get_int_env("GPU_IDLE_THRESHOLD_PERCENT", 5)
+    surplus_url = os.environ.get('SURPLUS_CHECK_URL')
     last_active = time.time()
     os.system("id -a")
     while True:
@@ -70,6 +67,17 @@ if __name__ == "__main__":
         if any(x > gpu_idle for x in gpu):
             last_active = time.time()
             continue
+
+        if surplus_url:
+            try:
+                surplus = "True" in str(requests.get(surplus_url, verify=False).json())
+            except Exception as ex:
+                surplus = False
+                print(ex)
+            if surplus:
+                print("surplus ignore idle")
+                last_active = time.time()
+                continue
 
         if host_has_ssh_sessions():
             last_active = time.time()
