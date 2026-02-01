@@ -2,14 +2,6 @@
 
 System monitoring container for AI clusters that monitors CPU, GPU, and SSH sessions, then powers down when idle.
 
-## Features
-
-- Real-time CPU and GPU usage monitoring
-- SSH session monitoring
-- Configurable idle thresholds
-- REST API for shutdown control (requires API_USERNAME and API_PASSWORD to be set)
-- Docker container with NVIDIA GPU support
-
 ## Configuration
 
 ### Environment Variables
@@ -26,48 +18,6 @@ System monitoring container for AI clusters that monitors CPU, GPU, and SSH sess
 | `SURPLUS_CHECK_URL` | | Optional URL to check for surplus capacity |
 | `ENABLE_IDLE_DETECTION` | false | Enable/disable automatic idle detection |
 
-## Installation & Setup
-
-### Clone and Install
-
-```bash
-git clone <repository-url>
-cd idle-shutdown-container
-```
-
-### Docker (Recommended)
-
-```bash
-# Build Docker image
-docker build -t idle-shutdown-monitor .
-
-# Run container
-docker run --privileged --device=/dev/nvidia0 \
-  -e NVIDIA_VISIBLE_DEVICES=all \
-  -e NVIDIA_DRIVER_CAPABILITIES=all \
-  -e INTERVAL_SECONDS=10 \
-  -e IDLE_TIME_SECONDS=500 \
-  -v /host:/host \
-  -p 8000:8000 \
-  idle-shutdown-monitor
-```
-
-### Python
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run with default settings
-python3 main.py
-
-# Run with custom settings
-INTERVAL_SECONDS=30 IDLE_TIME_SECONDS=600 ENABLE_IDLE_DETECTION=false python3 main.py
-
-# API only mode (no automatic shutdown)
-ENABLE_IDLE_DETECTION=false python3 main.py
-```
-
 ## REST API
 
 The container includes a FastAPI-based REST API for controlling the shutdown sequence. The API is only enabled when both `API_USERNAME` and `API_PASSWORD` environment variables are set. `/health` endpoint is always available if API is running.
@@ -75,12 +25,7 @@ The container includes a FastAPI-based REST API for controlling the shutdown seq
 ### API Health Check
 
 ```bash
-# When API is enabled
 curl http://localhost:8000/health
-
-# When API is disabled (no credentials set)
-curl http://localhost:8000/health
-# Returns: Connection refused or similar
 ```
 
 **Response (when API enabled):** `{"status": "healthy"}`
@@ -90,14 +35,6 @@ curl http://localhost:8000/health
 ```bash
 # When API is enabled
 curl -u admin:shutdown123 -X POST http://localhost:8000/poweroff
-
-# When API is disabled (credentials not set)
-curl -u admin:shutdown123 -X POST http://localhost:8000/poweroff
-# Returns: {"error": "API credentials not configured"}, 503
-
-# Invalid credentials
-curl -u wrong:password -X POST http://localhost:8000/poweroff
-# Returns: {"error": "Invalid credentials"}, 401
 ```
 
 **Response (when API enabled):** `{"message": "Shutdown initiated"}`
@@ -117,26 +54,6 @@ ENABLE_IDLE_DETECTION=false python3 main.py
 ```
 
 This allows you to manually control shutdown via the API only.
-
-## Monitoring
-
-### Check CPU Usage
-
-```bash
-python3 -c "from main import get_cpu_usage; print(get_cpu_usage())"
-```
-
-### Check GPU Usage
-
-```bash
-python3 -c "from main import get_gpu_usage; print(get_gpu_usage())"
-```
-
-### Test Environment Variables
-
-```bash
-python3 -c "from main import get_int_env; print(get_int_env('INTERVAL_SECONDS', 10))"
-```
 
 ## How It Works
 
@@ -167,6 +84,4 @@ python3 -c "from main import get_int_env; print(get_int_env('INTERVAL_SECONDS', 
 - API port can be customized via `API_PORT`
 - Consider using reverse proxy with SSL for production deployments
 
-## License
 
-MIT License
