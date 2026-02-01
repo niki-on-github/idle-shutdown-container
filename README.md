@@ -18,6 +18,80 @@ System monitoring container for AI clusters that monitors CPU, GPU, and SSH sess
 | `SURPLUS_CHECK_URL` | | Optional URL to check for surplus capacity |
 | `ENABLE_IDLE_DETECTION` | false | Enable/disable automatic idle detection |
 
+## Deployment
+
+```yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ${APP_NAME}
+  namespace: ${APP_NAMESPACE}
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: app-template
+      version: 4.0.1
+      sourceRef:
+        kind: HelmRepository
+        name: bjw-s-charts
+        namespace: flux-system
+
+  values:
+    defaultPodOptions:
+      runtimeClassName: "nvidia"
+    controllers:
+      ${APP_NAME}:
+        containers:
+          app:
+            securityContext:
+              privileged: true
+            image:
+              repository: ghcr.io/niki-on-github/idle-shutdown-container
+              tag: "v0.0.1"
+            env:
+              NVIDIA_VISIBLE_DEVICES: all
+              NVIDIA_DRIVER_CAPABILITIES: all
+              CPU_IDLE_THRESHOLD_PERCENT: "17"
+              API_PORT: "8000"
+              API_USERNAME: admin
+              API_PASSWORD: "${SECRET_WEBSERVICES_PASSWORD}"
+              ENABLE_IDLE_DETECTION: "false"
+              # SURPLUS_CHECK_URL: "https://solaredge.k8s.lan/surplus"
+
+    service:
+      api:
+        controller: ${APP_NAME}
+        ports:
+          http:
+            port: 8000
+
+    ingress:
+      api:
+        className: traefik
+        annotations:
+          traefik.ingress.kubernetes.io/router.entrypoints: websecure
+        hosts:
+          - host: &ingress1 "cmd.${SECRET_DOMAIN}"
+            paths:
+              - path: /
+                pathType: Prefix
+                service:
+                  identifier: api
+                  port: http
+        tls:
+          - hosts:
+              - *ingress1
+
+    persistence:
+      data:
+        type: hostPath
+        hostPath: /
+        globalMounts:
+          - path: /host
+```
+
+
 ## REST API
 
 The container includes a FastAPI-based REST API for controlling the shutdown sequence. The API is only enabled when both `API_USERNAME` and `API_PASSWORD` environment variables are set. `/health` endpoint is always available if API is running.
