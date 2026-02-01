@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "idle-shutdown-monitor"
+version = "1.0.0"
+description = "AI cluster idle monitoring with REST API"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "psutil>=5.9.0",
+    "pynvml>=12.1.0",
+    "requests>=2.28.0",
+    "fastapi>=0.95.0",
+    "uvicorn>=0.22.0",
+]
